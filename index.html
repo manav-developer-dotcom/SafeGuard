@@ -1,0 +1,1439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeGuard AI - Domestic Abuse Pattern Detection</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background: #0f172a; color: #e2e8f0; }
+        
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #60a5fa, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .nav-item.active {
+            background: rgba(59, 130, 246, 0.15);
+            border-left: 3px solid #60a5fa;
+            color: #60a5fa;
+        }
+        
+        .pulse-ring {
+            animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+        
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        
+        .waveform-bar {
+            animation: wave 1.2s ease-in-out infinite;
+        }
+        
+        @keyframes wave {
+            0%, 100% { height: 20%; }
+            50% { height: 100%; }
+        }
+        
+        .scan-line {
+            animation: scan 2s linear infinite;
+        }
+        
+        @keyframes scan {
+            0% { top: 0%; opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { top: 100%; opacity: 0; }
+        }
+        
+        .hidden-section { display: none; }
+        .visible-section { display: block; animation: fadeIn 0.4s ease-in; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .consent-checkbox:checked + div {
+            background: rgba(34, 197, 94, 0.2);
+            border-color: #22c55e;
+        }
+        
+        .alert-critical { 
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(185, 28, 28, 0.2));
+            border: 1px solid rgba(239, 68, 68, 0.5);
+        }
+        
+        .alert-warning {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(180, 83, 9, 0.2));
+            border: 1px solid rgba(245, 158, 11, 0.5);
+        }
+        
+        .alert-safe {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(21, 128, 61, 0.2));
+            border: 1px solid rgba(34, 197, 94, 0.5);
+        }
+    </style>
+</head>
+<body class="min-h-screen overflow-x-hidden">
+
+    <!-- Login Screen -->
+    <div id="loginScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900">
+        <div class="w-full max-w-md p-8 glass-panel rounded-2xl shadow-2xl">
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-shield-alt text-2xl text-white"></i>
+                </div>
+                <h1 class="text-3xl font-bold gradient-text">SafeGuard AI</h1>
+                <p class="text-slate-400 mt-2">Emotion Recognition for Domestic Abuse Pattern Detection</p>
+            </div>
+            
+            <div id="loginForm">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Email</label>
+                        <input type="email" id="loginEmail" class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-white" placeholder="user@example.com">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Password</label>
+                        <input type="password" id="loginPassword" class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-white" placeholder="••••••••">
+                    </div>
+                    <button onclick="handleLogin()" class="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-lg font-semibold text-white transition-all transform hover:scale-[1.02]">
+                        Sign In
+                    </button>
+                </div>
+                <p class="text-center mt-4 text-slate-400">
+                    Don't have an account? <button onclick="toggleAuthMode()" class="text-blue-400 hover:text-blue-300 font-medium">Register</button>
+                </p>
+            </div>
+
+            <div id="registerForm" class="hidden">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Full Name</label>
+                        <input type="text" id="regName" class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-white" placeholder="John Doe">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Email</label>
+                        <input type="email" id="regEmail" class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-white" placeholder="user@example.com">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Password</label>
+                        <input type="password" id="regPassword" class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-white" placeholder="••••••••">
+                    </div>
+                    <button onclick="handleRegister()" class="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-lg font-semibold text-white transition-all">
+                        Create Account
+                    </button>
+                </div>
+                <p class="text-center mt-4 text-slate-400">
+                    Already have an account? <button onclick="toggleAuthMode()" class="text-blue-400 hover:text-blue-300 font-medium">Sign In</button>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp" class="hidden flex h-screen">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col">
+            <div class="p-6 border-b border-slate-800">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-shield-alt text-white"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-bold text-white">SafeGuard AI</h2>
+                        <p class="text-xs text-slate-400">Pattern Detection</p>
+                    </div>
+                </div>
+            </div>
+
+            <nav class="flex-1 py-6 space-y-1">
+                <button onclick="navigateTo('dashboard')" id="nav-dashboard" class="nav-item active w-full flex items-center gap-3 px-6 py-3 text-slate-300 hover:bg-slate-800 transition-colors">
+                    <i class="fas fa-chart-line w-5"></i>
+                    <span>Dashboard</span>
+                </button>
+                <button onclick="navigateTo('voice')" id="nav-voice" class="nav-item w-full flex items-center gap-3 px-6 py-3 text-slate-300 hover:bg-slate-800 transition-colors">
+                    <i class="fas fa-microphone w-5"></i>
+                    <span>Voice Analysis</span>
+                </button>
+                <button onclick="navigateTo('micro')" id="nav-micro" class="nav-item w-full flex items-center gap-3 px-6 py-3 text-slate-300 hover:bg-slate-800 transition-colors">
+                    <i class="fas fa-eye w-5"></i>
+                    <span>Micro-Expression</span>
+                </button>
+                <button onclick="navigateTo('behavioral')" id="nav-behavioral" class="nav-item w-full flex items-center gap-3 px-6 py-3 text-slate-300 hover:bg-slate-800 transition-colors">
+                    <i class="fas fa-project-diagram w-5"></i>
+                    <span>Behavioral Tracker</span>
+                </button>
+                <button onclick="navigateTo('history')" id="nav-history" class="nav-item w-full flex items-center gap-3 px-6 py-3 text-slate-300 hover:bg-slate-800 transition-colors">
+                    <i class="fas fa-history w-5"></i>
+                    <span>History & Reports</span>
+                </button>
+            </nav>
+
+            <div class="p-4 border-t border-slate-800">
+                <div class="glass-panel rounded-lg p-4 mb-4">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-xs font-bold" id="userAvatar">
+                            JD
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-white truncate" id="userName">User</p>
+                            <p class="text-xs text-slate-400 truncate" id="userEmail">user@example.com</p>
+                        </div>
+                    </div>
+                </div>
+                <button onclick="logout()" class="w-full flex items-center gap-2 px-4 py-2 text-red-400 hover:bg-red-400/10 rounded-lg transition-colors">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto bg-slate-950">
+            <!-- Header -->
+            <header class="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-md border-b border-slate-800 px-8 py-4 flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-bold text-white" id="pageTitle">Dashboard</h1>
+                    <p class="text-sm text-slate-400" id="pageSubtitle">Overview of your safety monitoring</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/30 text-green-400 text-sm">
+                        <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                        System Active
+                    </div>
+                </div>
+            </header>
+
+            <div class="p-8 max-w-7xl mx-auto">
+
+                <!-- DASHBOARD SECTION -->
+                <div id="section-dashboard" class="visible-section space-y-6">
+                    <!-- Stats Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div class="glass-panel rounded-xl p-6">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="p-3 rounded-lg bg-blue-500/20 text-blue-400">
+                                    <i class="fas fa-microphone text-xl"></i>
+                                </div>
+                                <span class="text-xs text-slate-400">Total</span>
+                            </div>
+                            <h3 class="text-2xl font-bold text-white" id="statVoice">0</h3>
+                            <p class="text-sm text-slate-400">Voice Analyses</p>
+                        </div>
+                        <div class="glass-panel rounded-xl p-6">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="p-3 rounded-lg bg-purple-500/20 text-purple-400">
+                                    <i class="fas fa-eye text-xl"></i>
+                                </div>
+                                <span class="text-xs text-slate-400">Total</span>
+                            </div>
+                            <h3 class="text-2xl font-bold text-white" id="statMicro">0</h3>
+                            <p class="text-sm text-slate-400">Expression Scans</p>
+                        </div>
+                        <div class="glass-panel rounded-xl p-6">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="p-3 rounded-lg bg-orange-500/20 text-orange-400">
+                                    <i class="fas fa-project-diagram text-xl"></i>
+                                </div>
+                                <span class="text-xs text-slate-400">Total</span>
+                            </div>
+                            <h3 class="text-2xl font-bold text-white" id="statBehavior">0</h3>
+                            <p class="text-sm text-slate-400">Behavioral Checks</p>
+                        </div>
+                        <div class="glass-panel rounded-xl p-6">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="p-3 rounded-lg bg-red-500/20 text-red-400">
+                                    <i class="fas fa-exclamation-triangle text-xl"></i>
+                                </div>
+                                <span class="text-xs text-slate-400">Active</span>
+                            </div>
+                            <h3 class="text-2xl font-bold text-white" id="statAlerts">0</h3>
+                            <p class="text-sm text-slate-400">Flagged Patterns</p>
+                        </div>
+                    </div>
+
+                    <!-- Recent Alerts -->
+                    <div class="glass-panel rounded-xl p-6">
+                        <h3 class="text-lg font-semibold text-white mb-4">Recent Alerts</h3>
+                        <div id="recentAlerts" class="space-y-3">
+                            <p class="text-slate-400 text-center py-8">No alerts detected yet. Run an analysis to begin monitoring.</p>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <button onclick="navigateTo('voice')" class="glass-panel rounded-xl p-6 hover:bg-slate-800/50 transition-all text-left group">
+                            <div class="w-12 h-12 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                <i class="fas fa-microphone text-2xl"></i>
+                            </div>
+                            <h4 class="font-semibold text-white mb-1">New Voice Analysis</h4>
+                            <p class="text-sm text-slate-400">Analyze tone and speech patterns for stress markers</p>
+                        </button>
+                        <button onclick="navigateTo('micro')" class="glass-panel rounded-xl p-6 hover:bg-slate-800/50 transition-all text-left group">
+                            <div class="w-12 h-12 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                <i class="fas fa-eye text-2xl"></i>
+                            </div>
+                            <h4 class="font-semibold text-white mb-1">Micro-Expression Scan</h4>
+                            <p class="text-sm text-slate-400">Detect involuntary facial emotional cues</p>
+                        </button>
+                        <button onclick="navigateTo('behavioral')" class="glass-panel rounded-xl p-6 hover:bg-slate-800/50 transition-all text-left group">
+                            <div class="w-12 h-12 rounded-lg bg-orange-500/20 text-orange-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                <i class="fas fa-project-diagram text-2xl"></i>
+                            </div>
+                            <h4 class="font-semibold text-white mb-1">Behavioral Check</h4>
+                            <p class="text-sm text-slate-400">Track deviations from baseline patterns</p>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- VOICE ANALYSIS SECTION -->
+                <div id="section-voice" class="hidden-section space-y-6">
+                    <!-- Consent Banner -->
+                    <div class="glass-panel rounded-xl p-6 border-l-4 border-yellow-500">
+                        <div class="flex items-start gap-4">
+                            <i class="fas fa-info-circle text-yellow-500 text-xl mt-1"></i>
+                            <div>
+                                <h4 class="font-semibold text-white mb-1">Ethical Consent Required</h4>
+                                <p class="text-sm text-slate-300 mb-3">Voice analysis requires explicit consent. This system analyzes acoustic features (tone, pitch, stress markers) only - never the content of conversations. All data is encrypted and anonymized.</p>
+                                <label class="flex items-center gap-3 cursor-pointer">
+                                    <input type="checkbox" id="voiceConsent" class="consent-checkbox w-5 h-5 rounded border-slate-600 text-blue-600 focus:ring-blue-500 bg-slate-800" onchange="toggleVoiceUpload()">
+                                    <span class="text-sm text-slate-300">I consent to acoustic analysis of this recording</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Upload Area -->
+                        <div class="glass-panel rounded-xl p-6">
+                            <h3 class="text-lg font-semibold text-white mb-4">Upload Audio Recording</h3>
+                            <div id="voiceUploadArea" class="border-2 border-dashed border-slate-700 rounded-xl p-8 text-center opacity-50 pointer-events-none transition-all">
+                                <input type="file" id="voiceFile" accept="audio/*" class="hidden" onchange="handleVoiceUpload(event)">
+                                <div onclick="document.getElementById('voiceFile').click()" class="cursor-pointer">
+                                    <i class="fas fa-cloud-upload-alt text-4xl text-slate-500 mb-4"></i>
+                                    <p class="text-slate-400 mb-2">Click to upload or drag audio file</p>
+                                    <p class="text-xs text-slate-500">Supports MP3, WAV, OGG (Max 50MB)</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Recording Simulator -->
+                            <div class="mt-4 p-4 bg-slate-800/50 rounded-lg">
+                                <p class="text-sm text-slate-400 mb-2">Or use sample simulation:</p>
+                                <button onclick="simulateVoiceRecording()" id="recordBtn" disabled class="w-full py-3 bg-slate-700 text-slate-400 rounded-lg font-medium transition-all flex items-center justify-center gap-2">
+                                    <i class="fas fa-circle text-red-500"></i>
+                                    Start Simulation Recording
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Analysis Display -->
+                        <div class="glass-panel rounded-xl p-6">
+                            <h3 class="text-lg font-semibold text-white mb-4">Analysis Results</h3>
+                            <div id="voiceResults" class="space-y-4">
+                                <div class="flex items-center justify-center h-64 text-slate-500">
+                                    <div class="text-center">
+                                        <i class="fas fa-wave-square text-4xl mb-3 opacity-50"></i>
+                                        <p>Upload audio to see analysis</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Waveform Visualization -->
+                    <div class="glass-panel rounded-xl p-6">
+                        <h3 class="text-lg font-semibold text-white mb-4">Waveform Visualization</h3>
+                        <div class="h-32 flex items-end justify-center gap-1" id="waveformContainer">
+                            <!-- Bars generated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MICRO-EXPRESSION SECTION -->
+                <div id="section-micro" class="hidden-section space-y-6">
+                    <div class="glass-panel rounded-xl p-6 border-l-4 border-purple-500">
+                        <div class="flex items-start gap-4">
+                            <i class="fas fa-info-circle text-purple-500 text-xl mt-1"></i>
+                            <div>
+                                <h4 class="font-semibold text-white mb-1">Privacy Notice</h4>
+                                <p class="text-sm text-slate-300 mb-3">Micro-expression analysis detects involuntary facial movements lasting 0.5-4 seconds. Requires video consent. Data is processed locally when possible.</p>
+                                <label class="flex items-center gap-3 cursor-pointer">
+                                    <input type="checkbox" id="microConsent" class="consent-checkbox w-5 h-5 rounded border-slate-600 text-purple-600 focus:ring-purple-500 bg-slate-800" onchange="toggleMicroUpload()">
+                                    <span class="text-sm text-slate-300">I consent to facial micro-expression analysis</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Upload -->
+                        <div class="lg:col-span-1 glass-panel rounded-xl p-6">
+                            <h3 class="text-lg font-semibold text-white mb-4">Upload Video/Image</h3>
+                            <div id="microUploadArea" class="border-2 border-dashed border-slate-700 rounded-xl p-8 text-center opacity-50 pointer-events-none mb-4">
+                                <input type="file" id="microFile" accept="video/*,image/*" class="hidden" onchange="handleMicroUpload(event)">
+                                <div onclick="document.getElementById('microFile').click()" class="cursor-pointer">
+                                    <i class="fas fa-video text-4xl text-slate-500 mb-4"></i>
+                                    <p class="text-slate-400">Upload media for analysis</p>
+                                </div>
+                            </div>
+                            <button onclick="simulateMicroAnalysis()" id="microSimBtn" disabled class="w-full py-2 bg-purple-600/30 text-purple-300 border border-purple-500/50 rounded-lg text-sm hover:bg-purple-600/50 transition-all">
+                                Run Simulation Analysis
+                            </button>
+                        </div>
+
+                        <!-- Video Preview & Scan -->
+                        <div class="lg:col-span-2 glass-panel rounded-xl p-6 relative overflow-hidden">
+                            <div id="microPreview" class="aspect-video bg-slate-900 rounded-lg flex items-center justify-center relative overflow-hidden">
+                                <div class="text-center text-slate-500">
+                                    <i class="fas fa-eye text-5xl mb-3 opacity-30"></i>
+                                    <p>Media preview will appear here</p>
+                                </div>
+                                <!-- Scan overlay -->
+                                <div id="scanOverlay" class="absolute inset-0 hidden">
+                                    <div class="absolute inset-0 bg-purple-500/10"></div>
+                                    <div class="absolute left-0 right-0 h-1 bg-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.8)] scan-line"></div>
+                                    <div class="absolute inset-0 grid grid-cols-3 grid-rows-3">
+                                        <div class="border border-purple-500/30"></div><div class="border border-purple-500/30"></div><div class="border border-purple-500/30"></div>
+                                        <div class="border border-purple-500/30"></div><div class="border border-purple-500/30 flex items-center justify-center"><div class="w-20 h-20 border-2 border-purple-500 rounded-full animate-pulse"></div></div><div class="border border-purple-500/30"></div>
+                                        <div class="border border-purple-500/30"></div><div class="border border-purple-500/30"></div><div class="border border-purple-500/30"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Results -->
+                            <div id=" class="w-full flex items-center gap-2 px-4 py-2 text-red-400 hover:bg-red-400/10 rounded-lg transition-colors">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto bg-slate-950">
+            <!-- Header -->
+            <header class="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-md border-b border-slate-800 px-8 py-4 flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-bold text-white" id="pageTitle">Dashboard</h1>
+                    <p class="text-sm text-slate-400" id="pageSubtitle">Overview of your safety monitoring</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/30 text-green-400 text-sm">
+                        <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                        System Active
+                    </div>
+                </div>
+            </header>
+
+            <div class="p-8 max-w-7xl mx-auto">
+
+                <!-- DASHBOARD SECTION -->
+                <div id="section-dashboard" class="visible-section space-y-6">
+                    <!-- Stats Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div class="glass-panel rounded-xl p-6">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="p-3 rounded-lg bg-blue-500/20 text-blue-400">
+                                    <i class="fas fa-microphone text-xl"></i>
+                                </div>
+                                <span class="text-xs text-slate-400">Total</span>
+                            </div>
+                            <h3 class="text-2xl font-bold text-white" id="statVoice">0</h3>
+                            <p class="text-sm text-slate-400">Voice Analyses</p>
+                        </div>
+                        <div class="glass-panel rounded-xl p-6">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="p-3 rounded-lg bg-purple-500/20 text-purple-400">
+                                    <i class="fas fa-eye text-xl"></i>
+                                </div>
+                                <span class="text-xs text-slate-400">Total</span>
+                            </div>
+                            <h3 class="text-2xl font-bold text-white" id="statMicro">0</h3>
+                            <p class="text-sm text-slate-400">Expression Scans</p>
+                        </div>
+                        <div class="glass-panel rounded-xl p-6">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="p-3 rounded-lg bg-orange-500/20 text-orange-400">
+                                    <i class="fas fa-project-diagram text-xl"></i>
+                                </div>
+                                <span class="text-xs text-slate-400">Total</span>
+                            </div>
+                            <h3 class="text-2xl font-bold text-white" id="statBehavior">0</h3>
+                            <p class="text-sm text-slate-400">Behavioral Checks</p>
+                        </div>
+                        <div class="glass-panel rounded-xl p-6">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="p-3 rounded-lg bg-red-500/20 text-red-400">
+                                    <i class="fas fa-exclamation-triangle text-xl"></i>
+                                </div>
+                                <span class="text-xs text-slate-400">Active</span>
+                            </div>
+                            <h3 class="text-2xl font-bold text-white" id="statAlerts">0</h3>
+                            <p class="text-sm text-slate-400">Flagged Patterns</p>
+                        </div>
+                    </div>
+
+                    <!-- Recent Alerts -->
+                    <div class="glass-panel rounded-xl p-6">
+                        <h3 class="text-lg font-semibold text-white mb-4">Recent Alerts</h3>
+                        <div id="recentAlerts" class="space-y-3">
+                            <p class="text-slate-400 text-center py-8">No alerts detected yet. Run an analysis to begin monitoring.</p>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <button onclick="navigateTo('voice')" class="glass-panel rounded-xl p-6 hover:bg-slate-800/50 transition-all text-left group">
+                            <div class="w-12 h-12 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                <i class="fas fa-microphone text-2xl"></i>
+                            </div>
+                            <h4 class="font-semibold text-white mb-1">New Voice Analysis</h4>
+                            <p class="text-sm text-slate-400">Analyze tone and speech patterns for stress markers</p>
+                        </button>
+                        <button onclick="navigateTo('micro')" class="glass-panel rounded-xl p-6 hover:bg-slate-800/50 transition-all text-left group">
+                            <div class="w-12 h-12 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                <i class="fas fa-eye text-2xl"></i>
+                            </div>
+                            <h4 class="font-semibold text-white mb-1">Micro-Expression Scan</h4>
+                            <p class="text-sm text-slate-400">Detect involuntary facial emotional cues</p>
+                        </button>
+                        <button onclick="navigateTo('behavioral')" class="glass-panel rounded-xl p-6 hover:bg-slate-800/50 transition-all text-left group">
+                            <div class="w-12 h-12 rounded-lg bg-orange-500/20 text-orange-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                <i class="fas fa-project-diagram text-2xl"></i>
+                            </div>
+                            <h4 class="font-semibold text-white mb-1">Behavioral Check</h4>
+                            <p class="text-sm text-slate-400">Track deviations from baseline patterns</p>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- VOICE ANALYSIS SECTION -->
+                <div id="section-voice" class="hidden-section space-y-6">
+                    <!-- Consent Banner -->
+                    <div class="glass-panel rounded-xl p-6 border-l-4 border-yellow-500">
+                        <div class="flex items-start gap-4">
+                            <i class="fas fa-info-circle text-yellow-500 text-xl mt-1"></i>
+                            <div>
+                                <h4 class="font-semibold text-white mb-1">Ethical Consent Required</h4>
+                                <p class="text-sm text-slate-300 mb-3">Voice analysis requires explicit consent. This system analyzes acoustic features (tone, pitch, stress markers) only - never the content of conversations. All data is encrypted and anonymized.</p>
+                                <label class="flex items-center gap-3 cursor-pointer">
+                                    <input type="checkbox" id="voiceConsent" class="consent-checkbox w-5 h-5 rounded border-slate-600 text-blue-600 focus:ring-blue-500 bg-slate-800" onchange="toggleVoiceUpload()">
+                                    <span class="text-sm text-slate-300">I consent to acoustic analysis of this recording</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Upload Area -->
+                        <div class="glass-panel rounded-xl p-6">
+                            <h3 class="text-lg font-semibold text-white mb-4">Upload Audio Recording</h3>
+                            <div id="voiceUploadArea" class="border-2 border-dashed border-slate-700 rounded-xl p-8 text-center opacity-50 pointer-events-none transition-all">
+                                <input type="file" id="voiceFile" accept="audio/*" class="hidden" onchange="handleVoiceUpload(event)">
+                                <div onclick="document.getElementById('voiceFile').click()" class="cursor-pointer">
+                                    <i class="fas fa-cloud-upload-alt text-4xl text-slate-500 mb-4"></i>
+                                    <p class="text-slate-400 mb-2">Click to upload or drag audio file</p>
+                                    <p class="text-xs text-slate-500">Supports MP3, WAV, OGG (Max 50MB)</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Recording Simulator -->
+                            <div class="mt-4 p-4 bg-slate-800/50 rounded-lg">
+                                <p class="text-sm text-slate-400 mb-2">Or use sample simulation:</p>
+                                <button onclick="simulateVoiceRecording()" id="recordBtn" disabled class="w-full py-3 bg-slate-700 text-slate-400 rounded-lg font-medium transition-all flex items-center justify-center gap-2">
+                                    <i class="fas fa-circle text-red-500"></i>
+                                    Start Simulation Recording
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Analysis Display -->
+                        <div class="glass-panel rounded-xl p-6">
+                            <h3 class="text-lg font-semibold text-white mb-4">Analysis Results</h3>
+                            <div id="voiceResults" class="space-y-4">
+                                <div class="flex items-center justify-center h-64 text-slate-500">
+                                    <div class="text-center">
+                                        <i class="fas fa-wave-square text-4xl mb-3 opacity-50"></i>
+                                        <p>Upload audio to see analysis</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Waveform Visualization -->
+                    <div class="glass-panel rounded-xl p-6">
+                        <h3 class="text-lg font-semibold text-white mb-4">Waveform Visualization</h3>
+                        <div class="h-32 flex items-end justify-center gap-1" id="waveformContainer">
+                            <!-- Bars generated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MICRO-EXPRESSION SECTION -->
+                <div id="section-micro" class="hidden-section space-y-6">
+                    <div class="glass-panel rounded-xl p-6 border-l-4 border-purple-500">
+                        <div class="flex items-start gap-4">
+                            <i class="fas fa-info-circle text-purple-500 text-xl mt-1"></i>
+                            <div>
+                                <h4 class="font-semibold text-white mb-1">Privacy Notice</h4>
+                                <p class="text-sm text-slate-300 mb-3">Micro-expression analysis detects involuntary facial movements lasting 0.5-4 seconds. Requires video consent. Data is processed locally when possible.</p>
+                                <label class="flex items-center gap-3 cursor-pointer">
+                                    <input type="checkbox" id="microConsent" class="consent-checkbox w-5 h-5 rounded border-slate-600 text-purple-600 focus:ring-purple-500 bg-slate-800" onchange="toggleMicroUpload()">
+                                    <span class="text-sm text-slate-300">I consent to facial micro-expression analysis</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Upload -->
+                        <div class="lg:col-span-1 glass-panel rounded-xl p-6">
+                            <h3 class="text-lg font-semibold text-white mb-4">Upload Video/Image</h3>
+                            <div id="microUploadArea" class="border-2 border-dashed border-slate-700 rounded-xl p-8 text-center opacity-50 pointer-events-none mb-4">
+                                <input type="file" id="microFile" accept="video/*,image/*" class="hidden" onchange="handleMicroUpload(event)">
+                                <div onclick="document.getElementById('microFile').click()" class="cursor-pointer">
+                                    <i class="fas fa-video text-4xl text-slate-500 mb-4"></i>
+                                    <p class="text-slate-400">Upload media for analysis</p>
+                                </div>
+                            </div>
+                            <button onclick="simulateMicroAnalysis()" id="microSimBtn" disabled class="w-full py-2 bg-purple-600/30 text-purple-300 border border-purple-500/50 rounded-lg text-sm hover:bg-purple-600/50 transition-all">
+                                Run Simulation Analysis
+                            </button>
+                        </div>
+
+                        <!-- Video Preview & Scan -->
+                        <div class="lg:col-span-2 glass-panel rounded-xl p-6 relative overflow-hidden">
+                            <div id="microPreview" class="aspect-video bg-slate-900 rounded-lg flex items-center justify-center relative overflow-hidden">
+                                <div class="text-center text-slate-500">
+                                    <i class="fas fa-eye text-5xl mb-3 opacity-30"></i>
+                                    <p>Media preview will appear here</p>
+                                </div>
+                                <!-- Scan overlay -->
+                                <div id="scanOverlay" class="absolute inset-0 hidden">
+                                    <div class="absolute inset-0 bg-purple-500/10"></div>
+                                    <div class="absolute left-0 right-0 h-1 bg-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.8)] scan-line"></div>
+                                    <div class="absolute inset-0 grid grid-cols-3 grid-rows-3">
+                                        <div class="border border-purple-500/30"></div><div class="border border-purple-500/30"></div><div class="border border-purple-500/30"></div>
+                                        <div class="border border-purple-500/30"></div><div class="border border-purple-500/30 flex items-center justify-center"><div class="w-20 h-20 border-2 border-purple-500 rounded-full animate-pulse"></div></div><div class="border border-purple-500/30"></div>
+                                        <div class="border border-purple-500/30"></div><div class="border border-purple-500/30"></div><div class="border border-purple-500/30"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Results -->
+                            <div id="microResults" class="mt-4 grid grid-cols-2 gap-3 hidden">
+                                <div class="bg-slate-800/50 rounded-lg p-3">
+                                    <p class="text-xs text-slate-400">Detected Emotion</p>
+                                    <p class="text-lg font-semibold text-purple-400" id="microEmotion">--</p>
+                                </div>
+                                <div class="bg-slate-800/50 rounded-lg p-3">
+                                    <p class="text-xs text-slate-400">Confidence</p>
+                                    <p class="text-lg font-semibold text-purple-400" id="microConfidence">--</p>
+                                </div>
+                                <div class="bg-slate-800/50 rounded-lg p-3">
+                                    <p class="text-xs text-slate-400">Micro-expression Count</p>
+                                    <p class="text-lg font-semibold text-purple-400" id="microCount">--</p>
+                                </div>
+                                <div class="bg-slate-800/50 rounded-lg p-3">
+                                    <p class="text-xs text-slate-400">Risk Level</p>
+                                    <p class="text-lg font-semibold" id="microRisk">--</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Emotion Timeline -->
+                    <div class="glass-panel rounded-xl p-6">
+                        <h3 class="text-lg font-semibold text-white mb-4">Emotion Timeline</h3>
+                        <div class="h-48 bg-slate-900 rounded-lg p-4 relative" id="emotionChartContainer">
+                            <canvas id="emotionChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BEHAVIORAL TRACKER SECTION -->
+                <div id="section-behavioral" class="hidden-section space-y-6">
+                    <div class="glass-panel rounded-xl p-6 border-l-4 border-orange-500">
+                        <div class="flex items-start gap-4">
+                            <i class="fas fa-info-circle text-orange-500 text-xl mt-1"></i>
+                            <div>
+                                <h4 class="font-semibold text-white mb-1">Behavioral Anomaly Detection</h4>
+                                <p class="text-sm text-slate-300 mb-3">Tracks deviations in communication, social activity, and routines. All data is aggregated and anonymized. Baseline profiling required.</p>
+                                <label class="flex items-center gap-3 cursor-pointer">
+                                    <input type="checkbox" id="behaviorConsent" class="consent-checkbox w-5 h-5 rounded border-slate-600 text-orange-600 focus:ring-orange-500 bg-slate-800" onchange="toggleBehaviorInput()">
+                                    <span class="text-sm text-slate-300">I consent to behavioral pattern analysis</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Input Form -->
+                        <div class="glass-panel rounded-xl p-6">
+                            <h3 class="text-lg font-semibold text-white mb-4">Daily Behavioral Input</h3>
+                            <div id="behaviorForm" class="space-y-4 opacity-50 pointer-events-none">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm text-slate-400 mb-1">Sleep Hours</label>
+                                        <input type="number" id="sleepHours" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white" placeholder="7.5">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm text-slate-400 mb-1">Social Interactions</label>
+                                        <input type="number" id="socialCount" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white" placeholder="5">
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm text-slate-400 mb-1">Messages Sent</label>
+                                        <input type="number" id="msgCount" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white" placeholder="42">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm text-slate-400 mb-1">Stress Level (1-10)</label>
+                                        <input type="range" id="stressLevel" min="1" max="10" value="5" class="w-full mt-2" oninput="document.getElementById('stressVal').textContent = this.value">
+                                        <div class="flex justify-between text-xs text-slate-500 mt-1">
+                                            <span>Low</span>
+                                            <span id="stressVal" class="text-orange-400 font-bold">5</span>
+                                            <span>High</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-slate-400 mb-1">Mood Description</label>
+                                    <select id="moodSelect" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white">
+                                        <option value="stable">Stable / Normal</option>
+                                        <option value="anxious">Anxious / Worried</option>
+                                        <option value="withdrawn">Withdrawn / Isolated</option>
+                                        <option value="agitated">Agitated / Irritable</option>
+                                        <option value="fearful">Fearful / Scared</option>
+                                    </select>
+                                </div>
+                                <button onclick="submitBehavioralData()" class="w-full py-3 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 rounded-lg font-semibold text-white transition-all">
+                                    Analyze Patterns
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Baseline & Anomaly -->
+                        <div class="glass-panel rounded-xl p-6">
+                            <h3 class="text-lg font-semibold text-white mb-4">Baseline vs Current</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <div class="flex justify-between text-sm mb-1">
+                                        <span class="text-slate-400">Sleep Pattern</span>
+                                        <span class="text-white" id="baselineSleep">Baseline: 7.5h</span>
+                                    </div>
+                                    <div class="h-2 bg-slate-800 rounded-full overflow-hidden">
+                                        <div id="barSleep" class="h-full bg-blue-500 transition-all duration-1000" style="width: 75%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-sm mb-1">
+                                        <span class="text-slate-400">Social Activity</span>
+                                        <span class="text-white" id="baselineSocial">Baseline: 5 interactions</span>
+                                    </div>
+                                    <div class="h-2 bg-slate-800 rounded-full overflow-hidden">
+                                        <div id="barSocial" class="h-full bg-green-500 transition-all duration-1000" style="width: 50%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-sm mb-1">
+                                        <span class="text-slate-400">Communication</span>
+                                        <span class="text-white" id="baselineComm">Baseline: 40 msgs</span>
+                                    </div>
+                                    <div class="h-2 bg-slate-800 rounded-full overflow-hidden">
+                                        <div id="barComm" class="h-full bg-purple-500 transition-all duration-1000" style="width: 60%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-sm mb-1">
+                                        <span class="text-slate-400">Stress Baseline</span>
+                                        <span class="text-white" id="baselineStress">Baseline: 3/10</span>
+                                    </div>
+                                    <div class="h-2 bg-slate-800 rounded-full overflow-hidden">
+                                        <div id="barStress" class="h-full bg-yellow-500 transition-all duration-1000" style="width: 30%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div id="anomalyAlert" class="mt-6 hidden">
+                                <div class="alert-warning rounded-lg p-4 flex items-start gap-3">
+                                    <i class="fas fa-exclamation-triangle text-yellow-500 mt-1"></i>
+                                    <div>
+                                        <h4 class="font-semibold text-yellow-400">Anomaly Detected</h4>
+                                        <p class="text-sm text-yellow-200/80" id="anomalyText">Significant deviation from baseline detected in stress levels.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Trend Chart -->
+                    <div class="glass-panel rounded-xl p-6">
+                        <h3 class="text-lg font-semibold text-white mb-4">Behavioral Trend (Last 7 Days)</h3>
+                        <div class="h-64">
+                            <canvas id="behaviorChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- HISTORY SECTION -->
+                <div id="section-history" class="hidden-section space-y-6">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-lg font-semibold text-white">Analysis History</h3>
+                        <button onclick="clearAllHistory()" class="px-4 py-2 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-all text-sm">
+                            <i class="fas fa-trash-alt mr-2"></i>Clear History
+                        </button>
+                    </div>
+
+                    <div class="space-y-4" id="historyList">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // ==================== AUTHENTICATION ====================
+        let currentUser = null;
+        let users = JSON.parse(localStorage.getItem('safeguard_users')) || [];
+        let analyses = JSON.parse(localStorage.getItem('safeguard_analyses')) || [];
+
+        // Initialize waveform bars
+        function initWaveform() {
+            const container = document.getElementById('waveformContainer');
+            container.innerHTML = '';
+            for (let i = 0; i < 40; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'waveform-bar w-1 bg-blue-500/60 rounded-full';
+                bar.style.height = Math.random() * 100 + '%';
+                bar.style.animationDelay = (i * 0.05) + 's';
+                container.appendChild(bar);
+            }
+        }
+        initWaveform();
+
+        function toggleAuthMode() {
+            document.getElementById('loginForm').classList.toggle('hidden');
+            document.getElementById('registerForm').classList.toggle('hidden');
+        }
+
+        function handleRegister() {
+            const name = document.getElementById('regName').value;
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            
+            if (!name || !email || !password) {
+                alert('Please fill all fields');
+                return;
+            }
+            
+            if (users.find(u => u.email === email)) {
+                alert('Email already registered');
+                return;
+            }
+            
+            const user = { id: Date.now(), name, email, password, createdAt: new Date().toISOString() };
+            users.push(user);
+            localStorage.setItem('safeguard_users', JSON.stringify(users));
+            
+            // Create baseline for behavioral tracking
+            const baseline = {
+                sleep: 7.5,
+                social: 5,
+                messages: 40,
+                stress: 3
+            };
+            localStorage.setItem(`safeguard_baseline_${user.id}`, JSON.stringify(baseline));
+            
+            alert('Registration successful! Please login.');
+            toggleAuthMode();
+        }
+
+        function handleLogin() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            const user = users.find(u => u.email === email && u.password === password);
+            if (!user) {
+                alert('Invalid credentials');
+                return;
+            }
+            
+            currentUser = user;
+            localStorage.setItem('safeguard_current_user', JSON.stringify(user));
+            showMainApp();
+        }
+
+        function showMainApp() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            document.getElementById('userName').textContent = currentUser.name;
+            document.getElementById('userEmail').textContent = currentUser.email;
+            document.getElementById('userAvatar').textContent = currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase();
+            
+            updateDashboard();
+            initBehaviorChart();
+        }
+
+        function logout() {
+            currentUser = null;
+            localStorage.removeItem('safeguard_current_user');
+            document.getElementById('mainApp').classList.add('hidden');
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('loginEmail').value = '';
+            document.getElementById('loginPassword').value = '';
+        }
+
+        // Check for existing session
+        const savedUser = localStorage.getItem('safeguard_current_user');
+        if (savedUser) {
+            currentUser = JSON.parse(savedUser);
+            showMainApp();
+        }
+
+        // ==================== NAVIGATION ====================
+        function navigateTo(section) {
+            // Hide all sections
+            document.querySelectorAll('[id^="section-"]').forEach(el => {
+                el.classList.remove('visible-section');
+                el.classList.add('hidden-section');
+            });
+            
+            // Show target
+            document.getElementById(`section-${section}`).classList.remove('hidden-section');
+            document.getElementById(`section-${section}`).classList.add('visible-section');
+            
+            // Update nav
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(`nav-${section}`).classList.add('active');
+            
+            // Update header
+            const titles = {
+                dashboard: ['Dashboard', 'Overview of your safety monitoring'],
+                voice: ['Voice Tone Analysis', 'Acoustic pattern detection for stress markers'],
+                micro: ['Micro-Expression Detector', 'Facial emotion recognition analysis'],
+                behavioral: ['Behavioral Anomaly Tracker', 'Baseline deviation monitoring'],
+                history: ['History & Reports', 'Previous analysis records']
+            };
+            document.getElementById('pageTitle').textContent = titles[section][0];
+            document.getElementById('pageSubtitle').textContent = titles[section][1];
+            
+            if (section === 'history') renderHistory();
+            if (section === 'dashboard') updateDashboard();
+        }
+
+        // ==================== VOICE ANALYSIS ====================
+        function toggleVoiceUpload() {
+            const consent = document.getElementById('voiceConsent').checked;
+            const uploadArea = document.getElementById('voiceUploadArea');
+            const recordBtn = document.getElementById('recordBtn');
+            
+            if (consent) {
+                uploadArea.classList.remove('opacity-50', 'pointer-events-none');
+                uploadArea.classList.add('border-blue-500/50', 'bg-blue-500/5');
+                recordBtn.disabled = false;
+                recordBtn.classList.remove('bg-slate-700', 'text-slate-400');
+                recordBtn.classList.add('bg-red-600', 'text-white', 'hover:bg-red-700');
+            } else {
+                uploadArea.classList.add('opacity-50', 'pointer-events-none');
+                uploadArea.classList.remove('border-blue-500/50', 'bg-blue-500/5');
+                recordBtn.disabled = true;
+                recordBtn.classList.add('bg-slate-700', 'text-slate-400');
+                recordBtn.classList.remove('bg-red-600', 'text-white', 'hover:bg-red-700');
+            }
+        }
+
+        function handleVoiceUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            analyzeVoice(file.name);
+        }
+
+        let isRecording = false;
+        function simulateVoiceRecording() {
+            const btn = document.getElementById('recordBtn');
+            if (!isRecording) {
+                isRecording = true;
+                btn.innerHTML = '<i class="fas fa-stop"></i> Stop Recording (5s)...';
+                btn.classList.add('pulse-ring');
+                
+                // Simulate waveform animation
+                const bars = document.querySelectorAll('.waveform-bar');
+                bars.forEach(bar => {
+                    bar.style.animationDuration = '0.3s';
+                });
+                
+                setTimeout(() => {
+                    isRecording = false;
+                    btn.innerHTML = '<i class="fas fa-circle text-red-500"></i> Start Simulation Recording';
+                    btn.classList.remove('pulse-ring');
+                    bars.forEach(bar => {
+                        bar.style.animationDuration = '1.2s';
+                    });
+                    analyzeVoice('Recording_' + new Date().toLocaleTimeString());
+                }, 5000);
+            }
+        }
+
+        function analyzeVoice(filename) {
+            const resultsDiv = document.getElementById('voiceResults');
+            
+            // Simulate analysis
+            resultsDiv.innerHTML = `
+                <div class="flex items-center justify-center py-8">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                    <span class="ml-3 text-slate-400">Analyzing acoustic patterns...</span>
+                </div>
+            `;
+            
+            setTimeout(() => {
+                const stressLevel = Math.random() * 100;
+                const pitchVariance = Math.random() * 100;
+                const aggression = Math.random() * 100;
+                const timestamp = new Date().toISOString();
+                
+                const analysis = {
+                    id: Date.now(),
+                    userId: currentUser.id,
+                    type: 'voice',
+                    filename,
+                    timestamp,
+                    metrics: { stressLevel, pitchVariance, aggression },
+                    risk: aggression > 70 ? 'critical' : aggression > 40 ? 'warning' : 'safe'
+                };
+                
+                saveAnalysis(analysis);
+                
+                const alertClass = analysis.risk === 'critical' ? 'alert-critical' : analysis.risk === 'warning' ? 'alert-warning' : 'alert-safe';
+                const alertIcon = analysis.risk === 'critical' ? 'fa-exclamation-circle' : analysis.risk === 'warning' ? 'fa-exclamation-triangle' : 'fa-check-circle';
+                const alertColor = analysis.risk === 'critical' ? 'text-red-400' : analysis.risk === 'warning' ? 'text-yellow-400' : 'text-green-400';
+                const alertText = analysis.risk === 'critical' ? 'High Risk Pattern Detected' : analysis.risk === 'warning' ? 'Elevated Stress Indicators' : 'Normal Patterns';
+                
+                resultsDiv.innerHTML = `
+                    <div class="${alertClass} rounded-lg p-4 mb-4">
+                        <div class="flex items-center gap-3">
+                            <i class="fas ${alertIcon} ${alertColor} text-xl"></i>
+                            <div>
+                                <h4 class="font-semibold ${alertColor}">${alertText}</h4>
+                                <p class="text-sm text-slate-300">Analysis completed at ${new Date(timestamp).toLocaleTimeString()}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-slate-400">Stress Level</span>
+                                <span class="${stressLevel > 70 ? 'text-red-400' : 'text-blue-400'}">${stressLevel.toFixed(1)}%</span>
+                            </div>
+                            <div class="h-2 bg-slate-800 rounded-full overflow-hidden">
+                                <div class="h-full ${stressLevel > 70 ? 'bg-red-500' : 'bg-blue-500'} transition-all" style="width: ${stressLevel}%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-slate-400">Pitch Variance</span>
+                                <span class="text-purple-400">${pitchVariance.toFixed(1)}%</span>
+                            </div>
+                            <div class="h-2 bg-slate-800 rounded-full overflow-hidden">
+                                <div class="h-full bg-purple-500 transition-all" style="width: ${pitchVariance}%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-slate-400">Aggression Markers</span>
+                                <span class="${aggression > 70 ? 'text-red-400' : 'text-orange-400'}">${aggression.toFixed(1)}%</span>
+                            </div>
+                            <div class="h-2 bg-slate-800 rounded-full overflow-hidden">
+                                <div class="h-full ${aggression > 70 ? 'bg-red-500' : 'bg-orange-500'} transition-all" style="width: ${aggression}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 p-3 bg-slate-800/50 rounded-lg">
+                        <p class="text-xs text-slate-400"><i class="fas fa-info-circle mr-1"></i> This analysis is based on acoustic features only. Content was not analyzed.</p>
+                    </div>
+                `;
+                
+                updateDashboard();
+            }, 2000);
+        }
+
+        // ==================== MICRO-EXPRESSION ====================
+        function toggleMicroUpload() {
+            const consent = document.getElementById('microConsent').checked;
+            const uploadArea = document.getElementById('microUploadArea');
+            const simBtn = document.getElementById('microSimBtn');
+            
+            if (consent) {
+                uploadArea.classList.remove('opacity-50', 'pointer-events-none');
+                uploadArea.classList.add('border-purple-500/50', 'bg-purple-500/5');
+                simBtn.disabled = false;
+                simBtn.classList.remove('opacity-50');
+            } else {
+                uploadArea.classList.add('opacity-50', 'pointer-events-none');
+                uploadArea.classList.remove('border-purple-500/50', 'bg-purple-500/5');
+                simBtn.disabled = true;
+                simBtn.classList.add('opacity-50');
+            }
+        }
+
+        function handleMicroUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const preview = document.getElementById('microPreview');
+            const url = URL.createObjectURL(file);
+            
+            if (file.type.startsWith('video')) {
+                preview.innerHTML = `<video src="${url}" class="w-full h-full object-cover" controls></video>`;
+            } else {
+                preview.innerHTML = `<img src="${url}" class="w-full h-full object-cover" alt="uploaded">`;
+            }
+            
+            setTimeout(() => runMicroAnalysis(), 1000);
+        }
+
+        function simulateMicroAnalysis() {
+            const preview = document.getElementById('microPreview');
+            preview.innerHTML = `
+                <div class="w-full h-full bg-slate-800 flex items-center justify-center">
+                    <div class="text-center">
+                        <div class="w-20 h-20 rounded-full bg-purple-500/20 flex items-center justify-center mx-auto mb-4 animate-pulse">
+                            <i class="fas fa-user text-3xl text-purple-400"></i>
+                        </div>
+                        <p class="text-purple-400">Simulated Subject Feed</p>
+                    </div>
+                </div>
+            `;
+            setTimeout(() => runMicroAnalysis(), 1500);
+        }
+
+        function runMicroAnalysis() {
+            const overlay = document.getElementById('scanOverlay');
+            const results = document.getElementById('microResults');
+            
+            overlay.classList.remove('hidden');
+            results.classList.add('hidden');
+            
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                results.classList.remove('hidden');
+                
+                const emotions = ['Fear', 'Distress', 'Anxiety', 'Neutral', 'Sadness'];
+                const detected = emotions[Math.floor(Math.random() * emotions.length)];
+                const confidence = (85 + Math.random() * 14).toFixed(1);
+                const count = Math.floor(Math.random() * 8) + 2;
+                const risk = detected === 'Fear' || detected === 'Distress' ? 'critical' : detected === 'Anxiety' || detected === 'Sadness' ? 'warning' : 'safe';
+                
+                document.getElementById('microEmotion').textContent = detected;
+                document.getElementById('microConfidence').textContent = confidence + '%';
+                document.getElementById('microCount').textContent = count;
+                
+                const riskEl = document.getElementById('microRisk');
+                riskEl.textContent = risk === 'critical' ? 'HIGH' : risk === 'warning' ? 'ELEVATED' : 'LOW';
+                riskEl.className = 'text-lg font-semibold ' + (risk === 'critical' ? 'text-red-400' : risk === 'warning' ? 'text-yellow-400' : 'text-green-400');
+                
+                // Update emotion chart
+                updateEmotionChart(detected);
+                
+                const analysis = {
+                    id: Date.now(),
+                    userId: currentUser.id,
+                    type: 'micro',
+                    timestamp: new Date().toISOString(),
+                    metrics: { emotion: detected, confidence, count, risk },
+                    risk
+                };
+                
+                saveAnalysis(analysis);
+                updateDashboard();
+                
+            }, 3000);
+        }
+
+        let emotionChartInstance = null;
+        function updateEmotionChart(primaryEmotion) {
+            const ctx = document.getElementById('emotionChart').getContext('2d');
+            
+            const data = {
+                labels: ['0s', '0.5s', '1s', '1.5s', '2s', '2.5s', '3s', '3.5s', '4s'],
+                datasets: [{
+                    label: 'Emotion Intensity',
+                    data: Array.from({length: 9}, () => Math.random() * 100),
+                    borderColor: 'rgb(168, 85, 247)',
+                    backgroundColor: 'rgba(168, 85, 247, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            };
+            
+            if (emotionChartInstance) emotionChartInstance.destroy();
+            
+            emotionChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, max: 100, grid: { color: 'rgba(148, 163, 184, 0.1)' }, ticks: { color: '#94a3b8' } },
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                    }
+                }
+            });
+        }
+
+        // ==================== BEHAVIORAL TRACKER ====================
+        function toggleBehaviorInput() {
+            const consent = document.getElementById('behaviorConsent').checked;
+            const form = document.getElementById('behaviorForm');
+            
+            if (consent) {
+                form.classList.remove('opacity-50', 'pointer-events-none');
+            } else {
+                form.classList.add('opacity-50', 'pointer-events-none');
+            }
+        }
+
+        let behaviorChartInstance = null;
+        function initBehaviorChart() {
+            const ctx = document.getElementById('behaviorChart').getContext('2d');
+            
+            const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            const baseline = JSON.parse(localStorage.getItem(`safeguard_baseline_${currentUser.id}`)) || { sleep: 7.5, social: 5, messages: 40, stress: 3 };
+            
+            const data = {
+                labels: days,
+                datasets: [
+                    {
+                        label: 'Stress Level',
+                        data: [3, 4, 3, 5, 4, 6, 5],
+                        borderColor: 'rgb(245, 158, 11)',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Sleep (hrs x 10)',
+                        data: [7.5, 7, 6.5, 7.5, 6, 5.5, 6].map(v => v * 10),
+                        borderColor: 'rgb(59, 130, 246)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Social Activity',
+                        data: [5, 4, 6, 3, 2, 1, 2],
+                        borderColor: 'rgb(34, 197, 94)',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        tension: 0.4
+                    }
+                ]
+            };
+            
+            if (behaviorChartInstance) behaviorChartInstance.destroy();
+            
+            behaviorChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#94a3b8' } } },
+                    scales: {
+                        y: { grid: { color: 'rgba(148, 163, 184, 0.1)' }, ticks: { color: '#94a3b8' } },
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                    }
+                }
+            });
+        }
+
+        function submitBehavioralData() {
+            const sleep = parseFloat(document.getElementById('sleepHours').value) || 7.5;
+            const social = parseInt(document.getElementById('socialCount').value) || 5;
+            const messages = parseInt(document.getElementById('msgCount').value) || 40;
+            const stress = parseInt(document.getElementById('stressLevel').value);
+            const mood = document.getElementById('moodSelect').value;
+            
+            const baseline = JSON.parse(localStorage.getItem(`safeguard_baseline_${currentUser.id}`)) || { sleep: 7.5, social: 5, messages: 40, stress: 3 };
+            
+            // Update bars
+            document.getElementById('barSleep').style.width = Math.min((sleep / 12) * 100, 100) + '%';
+            document.getElementById('barSocial').style.width = Math.min((social / 10) * 100, 100) + '%';
+            document.getElementById('barComm').style.width = Math.min((messages / 80) * 100, 100) + '%';
+            document.getElementById('barStress').style.width = (stress / 10) * 100 + '%';
+            
+            // Check anomalies
+            const sleepDev = Math.abs(sleep - baseline.sleep) / baseline.sleep;
+            const socialDev = Math.abs(social - baseline.social) / baseline.social;
+            const stressDev = Math.abs(stress - baseline.stress) / baseline.stress;
+            
+            const alertDiv = document.getElementById('anomalyAlert');
+            const alertText = document.getElementById('anomalyText');
+            
+            let risk = 'safe';
+            let alerts = [];
+            
+            if (sleepDev > 0.3) alerts.push(`Sleep deviation: ${sleep}h vs baseline ${baseline.sleep}h`);
+            if (socialDev > 0.5) alerts.push(`Social activity dropped significantly`);
+            if (stressDev > 1.0) alerts.push(`Stress levels critically elevated`);
+            if (mood === 'fearful' || mood === 'withdrawn') alerts.push(`Concerning mood reported: ${mood}`);
+            
+            if (alerts.length > 0) {
+                alertDiv.classList.remove('hidden');
+                alertText.textContent = alerts.join('. ') + '.';
+                risk = stressDev > 1.0 || mood === 'fearful' ? 'critical' : 'warning';
+            } else {
+                alertDiv.classList.add('hidden');
+            }
+            
+            const analysis = {
+                id: Date.now(),
+                userId: currentUser.id,
+                type: 'behavioral',
+                timestamp: new Date().toISOString(),
+                metrics: { sleep, social, messages, stress, mood },
+                risk
+            };
+            
+            saveAnalysis(analysis);
+            updateDashboard();
+            
+            // Reset form slightly
+            document.getElementById('sleepHours').value = '';
+            document.getElementById('socialCount').value = '';
+            document.getElementById('msgCount').value = '';
+        }
+
+        // ==================== DATA MANAGEMENT ====================
+        function saveAnalysis(analysis) {
+            analyses.push(analysis);
+            localStorage.setItem('safeguard_analyses', JSON.stringify(analyses));
+        }
+
+        function updateDashboard() {
+            if (!currentUser) return;
+            
+            const userAnalyses = analyses.filter(a => a.userId === currentUser.id);
+            const voiceCount = userAnalyses.filter(a => a.type === 'voice').length;
+            const microCount = userAnalyses.filter(a => a.type === 'micro').length;
+            const behaviorCount = userAnalyses.filter(a => a.type === 'behavioral').length;
+            const alerts = userAnalyses.filter(a => a.risk === 'critical' || a.risk === 'warning').length;
+            
+            document.getElementById('statVoice').textContent = voiceCount;
+            document.getElementById('statMicro').textContent = microCount;
+            document.getElementById('statBehavior').textContent = behaviorCount;
+            document.getElementById('statAlerts').textContent = alerts;
+            
+            // Recent alerts
+            const recentAlertsDiv = document.getElementById('recentAlerts');
+            const recent = userAnalyses.filter(a => a.risk !== 'safe').sort((a, b) => b.id - a.id).slice(0, 3);
+            
+            if (recent.length === 0) {
+                recentAlertsDiv.innerHTML = '<p class="text-slate-400 text-center py-8">No alerts detected yet. Run an analysis to begin monitoring.</p>';
+            } else {
+                recentAlertsDiv.innerHTML = recent.map(a => {
+                    const alertClass = a.risk === 'critical' ? 'alert-critical' : 'alert-warning';
+                    const icon = a.risk === 'critical' ? 'fa-exclamation-circle' : 'fa-exclamation-triangle';
+                    const color = a.risk === 'critical' ? 'text-red-400' : 'text-yellow-400';
+                    const typeLabel = a.type === 'voice' ? 'Voice Analysis' : a.type === 'micro' ? 'Micro-Expression' : 'Behavioral';
+                    
+                    return `
+                        <div class="${alertClass} rounded-lg p-4 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <i class="fas ${icon} ${color}"></i>
+                                <div>
+                                    <p class="font-medium text-white text-sm">${typeLabel} Alert</p>
+                                    <p class="text-xs text-slate-400">${new Date(a.timestamp).toLocaleString()}</p>
+                                </div>
+                            </div>
+                            <span class="text-xs font-bold ${color} uppercase">${a.risk}</span>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('historyList');
+            const userAnalyses = analyses.filter(a => a.userId === currentUser.id).sort((a, b) => b.id - a.id);
+            
+            if (userAnalyses.length === 0) {
+                list.innerHTML = '<div class="text-center py-12 text-slate-500"><i class="fas fa-inbox text-4xl mb-3"></i><p>No analysis history found</p></div>';
+                return;
+            }
+            
+            list.innerHTML = userAnalyses.map(a => {
+                const typeConfig = {
+                    voice: { icon: 'fa-microphone', color: 'blue', label: 'Voice Analysis' },
+                    micro: { icon: 'fa-eye', color: 'purple', label: 'Micro-Expression' },
+                    behavioral: { icon: 'fa-project-diagram', color: 'orange', label: 'Behavioral' }
+                };
+                
+                const config = typeConfig[a.type];
+                const alertClass = a.risk === 'critical' ? 'border-red-500/50' : a.risk === 'warning' ? 'border-yellow-500/50' : 'border-green-500/50';
+                const riskBadge = a.risk === 'critical' ? 'bg-red-500/20 text-red-400' : a.risk === 'warning' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400';
+                
+                let details = '';
+                if (a.type === 'voice') details = `Stress: ${a.metrics.stressLevel?.toFixed(1)}%, Aggression: ${a.metrics.aggression?.toFixed(1)}%`;
+                else if (a.type === 'micro') details = `Emotion: ${a.metrics.emotion}, Confidence: ${a.metrics.confidence}%`;
+                else details = `Mood: ${a.metrics.mood}, Stress: ${a.metrics.stress}/10`;
+                
+                return `
+                    <div class="glass-panel rounded-xl p-4 border ${alertClass} flex items-center justify-between hover:bg-slate-800/50 transition-all">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-lg bg-${config.color}-500/20 flex items-center justify-center">
+                                <i class="fas ${config.icon} text-${config.color}-400"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-medium text-white">${config.label}</h4>
+                                <p class="text-sm text-slate-400">${details}</p>
+                                <p class="text-xs text-slate-500 mt-1">${new Date(a.timestamp).toLocaleString()}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="px-3 py-1 rounded-full text-xs font-medium ${riskBadge} uppercase">${a.risk}</span>
+                            <button onclick="deleteAnalysis(${a.id})" class="text-slate-500 hover:text-red-400 transition-colors">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function deleteAnalysis(id) {
+            analyses = analyses.filter(a => a.id !== id);
+            localStorage.setItem('safeguard_analyses', JSON.stringify(analyses));
+            renderHistory();
+            updateDashboard();
+        }
+
+        function clearAllHistory() {
+            if (!confirm('Are you sure you want to clear all history? This cannot be undone.')) return;
+            analyses = analyses.filter(a => a.userId !== currentUser.id);
+            localStorage.setItem('safeguard_analyses', JSON.stringify(analyses));
+            renderHistory();
+            updateDashboard();
+        }
+    </script>
+</body>
+</html>
